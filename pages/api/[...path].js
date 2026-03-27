@@ -1,66 +1,49 @@
+// pages/api/[...path].js
 export default async function handler(req, res) {
   console.log('=== HANDLER CALLED ===');
   console.log('Method:', req.method);
   console.log('Path:', req.query.path);
   console.log('Headers:', req.headers);
-  
-  // ... остальной код
 
-
-// pages/api/[...path].js
-export default async function handler(req, res) {
-  // Проверка авторизации
-/*  const authHeader = req.headers.authorization;
+  // Проверка авторизации (отладочная версия)
+  const authHeader = req.headers.authorization;
   const expectedPassword = process.env.ADMIN_PASSWORD;
+
+  console.log('=== DEBUG AUTH ===');
+  console.log('authHeader:', authHeader);
+  console.log('expectedPassword:', expectedPassword);
+
   if (!expectedPassword) {
+    console.error('ADMIN_PASSWORD not set');
     return res.status(500).json({ error: 'ADMIN_PASSWORD not set' });
   }
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    console.error('No Bearer token, authHeader:', authHeader);
+    return res.status(401).json({
+      error: 'Unauthorized',
+      debug: { authHeader, expected: expectedPassword }
+    });
   }
+
   const token = authHeader.slice(7);
+  console.log('token extracted:', token);
+  console.log('token length:', token.length);
+  console.log('expected length:', expectedPassword.length);
+
   if (token !== expectedPassword) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }*/
-  // Проверка авторизации (отладочная версия)
-const authHeader = req.headers.authorization;
-const expectedPassword = process.env.ADMIN_PASSWORD;
-
-console.log('=== DEBUG AUTH ===');
-console.log('authHeader:', authHeader);
-console.log('expectedPassword:', expectedPassword);
-
-if (!expectedPassword) {
-  console.error('ADMIN_PASSWORD not set');
-  return res.status(500).json({ error: 'ADMIN_PASSWORD not set' });
-}
-
-if (!authHeader || !authHeader.startsWith('Bearer ')) {
-  console.error('No Bearer token, authHeader:', authHeader);
-  return res.status(401).json({ 
-    error: 'Unauthorized', 
-    debug: { authHeader, expected: expectedPassword }
-  });
-}
-
-const token = authHeader.slice(7);
-console.log('token extracted:', token);
-console.log('token length:', token.length);
-console.log('expected length:', expectedPassword.length);
-
-if (token !== expectedPassword) {
-  console.error('Token mismatch');
-  return res.status(403).json({
-    error: 'Forbidden',
-    debug: {
-      expected: expectedPassword,
-      received: token,
-      expectedLength: expectedPassword.length,
-      receivedLength: token.length
-    }
-  });
-}
-console.log('Auth OK');
+    console.error('Token mismatch');
+    return res.status(403).json({
+      error: 'Forbidden',
+      debug: {
+        expected: expectedPassword,
+        received: token,
+        expectedLength: expectedPassword.length,
+        receivedLength: token.length
+      }
+    });
+  }
+  console.log('Auth OK');
 
   // Разрешаем только POST
   if (req.method !== 'POST') {
@@ -89,5 +72,4 @@ console.log('Auth OK');
     console.error(err);
     res.status(500).json({ error: 'Proxy request failed' });
   }
-}
 }
