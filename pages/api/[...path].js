@@ -1,3 +1,12 @@
+export default async function handler(req, res) {
+  console.log('=== HANDLER CALLED ===');
+  console.log('Method:', req.method);
+  console.log('Path:', req.query.path);
+  console.log('Headers:', req.headers);
+  
+  // ... остальной код
+
+
 // pages/api/[...path].js
 export default async function handler(req, res) {
   // Проверка авторизации
@@ -80,4 +89,5 @@ console.log('Auth OK');
     console.error(err);
     res.status(500).json({ error: 'Proxy request failed' });
   }
+}
 }
