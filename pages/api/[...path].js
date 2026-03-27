@@ -1,6 +1,6 @@
 // pages/api/[...path].js
 export default async function handler(req, res) {
-  // 1. Проверка авторизации (пароль из заголовка Authorization: Bearer <password>)
+  // Проверка авторизации
   const authHeader = req.headers.authorization;
   const expectedPassword = process.env.ADMIN_PASSWORD;
   if (!expectedPassword) {
@@ -14,33 +14,27 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  // 2. Собираем URL Битрикс24
+  // Разрешаем только POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
   const webhookUrl = process.env.BITRIX24_WEBHOOK_URL;
   if (!webhookUrl) {
     return res.status(500).json({ error: 'BITRIX24_WEBHOOK_URL not set' });
   }
 
-  // путь, который был передан после /api/
-  const { path } = req.query; // массив частей пути
+  // путь: /api/imbot.bot.list -> path = ['imbot.bot.list']
+  const { path } = req.query;
   const methodPath = path.join('/'); // например, 'imbot.bot.list'
-  
-  // 3. Определяем метод REST (GET или POST)
-  let url;
-  let fetchOptions = { method: 'POST', headers: { 'Content-Type': 'application/json' } };
-  
-  if (req.method === 'GET') {
-    // для GET запросов используем query string
-    const query = new URLSearchParams(req.query).toString();
-    url = `${webhookUrl}${methodPath}?${query}`;
-    fetchOptions.method = 'GET';
-  } else {
-    // POST: тело запроса передаётся как JSON
-    url = `${webhookUrl}${methodPath}`;
-    fetchOptions.body = JSON.stringify(req.body);
-  }
+  const url = `${webhookUrl}${methodPath}`;
 
   try {
-    const response = await fetch(url, fetchOptions);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (err) {
