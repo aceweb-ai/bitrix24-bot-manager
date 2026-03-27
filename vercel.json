@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "pages/api/[...path].js": {
+      "maxDuration": 10
+    }
+  }
+}
