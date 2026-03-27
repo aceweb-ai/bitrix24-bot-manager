@@ -2,22 +2,16 @@ import { useState, useEffect } from 'react';
 
 const API_BASE = '/api';
 
-async function callBitrix(method, params = {}, httpMethod = 'POST') {
+async function callBitrix(method, params = {}) {
   const url = `${API_BASE}/${method}`;
   const options = {
-    method: httpMethod,
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${localStorage.getItem('adminPassword')}`,
     },
+    body: JSON.stringify(params),
   };
-  if (httpMethod === 'POST') {
-    options.body = JSON.stringify(params);
-  } else if (httpMethod === 'GET' && Object.keys(params).length) {
-    // для GET параметры добавляем в URL
-    const query = new URLSearchParams(params).toString();
-    return fetch(`${url}?${query}`, options);
-  }
   const response = await fetch(url, options);
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
@@ -47,14 +41,19 @@ export default function Home() {
     setLoading(true);
     setError('');
     try {
-      const data = await callBitrix('imbot.bot.list', {}, 'GET');
-      if (data.result) {
+      const data = await callBitrix('imbot.bot.list', {});
+      if (data.error) {
+        setError(`Ошибка API: ${data.error_description || data.error}`);
+        setBots([]);
+      } else if (Array.isArray(data.result)) {
         setBots(data.result);
       } else {
-        setError('Не удалось получить список ботов');
+        setError('Неожиданный формат ответа от API');
+        setBots([]);
       }
     } catch (err) {
       setError(err.message);
+      setBots([]);
     } finally {
       setLoading(false);
     }
@@ -66,7 +65,7 @@ export default function Home() {
     try {
       await callBitrix('imbot.unregister', { BOT_ID: botId });
       setMessage(`Бот ${botId} удалён`);
-      fetchBots(); // обновляем список
+      fetchBots();
     } catch (err) {
       setError(`Ошибка удаления: ${err.message}`);
     } finally {
@@ -90,7 +89,10 @@ export default function Home() {
       await callBitrix('imbot.update', { BOT_ID: parseInt(updateId), FIELDS: fields });
       setMessage(`Бот ${updateId} обновлён`);
       fetchBots();
-      setUpdateId(''); setUpdateName(''); setUpdatePosition(''); setUpdateColor('GREEN');
+      setUpdateId('');
+      setUpdateName('');
+      setUpdatePosition('');
+      setUpdateColor('GREEN');
     } catch (err) {
       setError(`Ошибка обновления: ${err.message}`);
     } finally {
@@ -128,36 +130,44 @@ export default function Home() {
       <h1>Управление ботами Битрикс24</h1>
       {error && <div style={{ color: 'red', background: '#ffeeee', padding: 10, marginBottom: 10 }}>{error}</div>}
       {message && <div style={{ color: 'green', background: '#eeffee', padding: 10, marginBottom: 10 }}>{message}</div>}
-      
+
       <h2>Список ботов</h2>
       {loading && <div>Загрузка...</div>}
-      <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-          <tr>
-            <th>ID</th><th>Имя</th><th>Код</th><th>Должность</th><th>Цвет</th><th>Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bots.map(bot => (
-            <tr key={bot.id}>
-              <td>{bot.id}</td>
-              <td>{bot.name} {bot.last_name}</td>
-              <td>{bot.code}</td>
-              <td>{bot.work_position}</td>
-              <td>{bot.color}</td>
-              <td>
-                <button onClick={() => deleteBot(bot.id)} disabled={loading}>Удалить</button>
-                <button onClick={() => {
-                  setUpdateId(bot.id);
-                  setUpdateName(bot.name);
-                  setUpdatePosition(bot.work_position || '');
-                  setUpdateColor(bot.color || 'GREEN');
-                }} style={{ marginLeft: 8 }}>Редактировать</button>
-              </td>
+      {!loading && Array.isArray(bots) && bots.length === 0 && <div>Нет ботов или не удалось загрузить список</div>}
+      {Array.isArray(bots) && bots.length > 0 && (
+        <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr>
+              <th>ID</th><th>Имя</th><th>Код</th><th>Должность</th><th>Цвет</th><th>Действия</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {bots.map(bot => (
+              <tr key={bot.id}>
+                <td>{bot.id}</td>
+                <td>{bot.name} {bot.last_name}</td>
+                <td>{bot.code}</td>
+                <td>{bot.work_position}</td>
+                <td>{bot.color}</td>
+                <td>
+                  <button onClick={() => deleteBot(bot.id)} disabled={loading}>Удалить</button>
+                  <button
+                    onClick={() => {
+                      setUpdateId(bot.id);
+                      setUpdateName(bot.name);
+                      setUpdatePosition(bot.work_position || '');
+                      setUpdateColor(bot.color || 'GREEN');
+                    }}
+                    style={{ marginLeft: 8 }}
+                  >
+                    Редактировать
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <hr />
       <h2>Редактирование бота</h2>
