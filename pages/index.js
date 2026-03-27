@@ -38,26 +38,30 @@ export default function Home() {
   };
 
   const fetchBots = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const data = await callBitrix('imbot.bot.list', {});
-      if (data.error) {
-        setError(`Ошибка API: ${data.error_description || data.error}`);
-        setBots([]);
-      } else if (Array.isArray(data.result)) {
-        setBots(data.result);
-      } else {
-        setError('Неожиданный формат ответа от API');
-        setBots([]);
-      }
-    } catch (err) {
-      setError(err.message);
+  setLoading(true);
+  setError('');
+  try {
+    const data = await callBitrix('imbot.bot.list', {});
+    if (data.error) {
+      setError(`Ошибка API: ${data.error_description || data.error}`);
       setBots([]);
-    } finally {
-      setLoading(false);
+    } else if (Array.isArray(data.result)) {
+      setBots(data.result);
+    } else if (data.result && typeof data.result === 'object') {
+      // Преобразуем объект в массив (ключи — ID, значения — данные бота)
+      const botsArray = Object.values(data.result);
+      setBots(botsArray);
+    } else {
+      setError('Неожиданный формат ответа от API');
+      setBots([]);
     }
-  };
+  } catch (err) {
+    setError(err.message);
+    setBots([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const deleteBot = async (botId) => {
     if (!confirm(`Удалить бота с ID ${botId}?`)) return;
